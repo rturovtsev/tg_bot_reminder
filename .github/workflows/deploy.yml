@@ -34,11 +34,12 @@ jobs:
       env:
         GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin
-          docker pull ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
-          docker stop tg_bot_reminder || true
-          docker rm tg_bot_reminder || true
-          docker run -d --name tg_bot_reminder -p 8443:8443 ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
-        EOF
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin &&
+          docker pull ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest &&
+          docker stop tg_bot_reminder || true &&
+          docker rm tg_bot_reminder || true &&
+          docker run -d --name tg_bot_reminder -p 8443:8443 -e BOT_TOKEN=\$BOT_TOKEN ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
+        "
