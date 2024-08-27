@@ -38,8 +38,12 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin &&
+          echo 'Pulling new Docker image' &&
           docker pull ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest &&
+          echo 'Stopping old container' &&
           docker stop tg_bot_reminder || true &&
           docker rm tg_bot_reminder || true &&
+          echo 'Running new container with BOT_TOKEN' &&
+          echo \$BOT_TOKEN &&
           docker run -d --name tg_bot_reminder -p 8443:8443 -e BOT_TOKEN=\$BOT_TOKEN ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
         "

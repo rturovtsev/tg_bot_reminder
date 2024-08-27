@@ -12,11 +12,12 @@ import (
 	"time"
 )
 
-var (
-	botToken = os.Getenv("BOT_TOKEN")
-)
-
 func main() {
+	botToken := os.Getenv("BOT_TOKEN")
+	if botToken == "" {
+		log.Panic("BOT_TOKEN environment variable not set")
+	}
+
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
 		log.Panic(err)
