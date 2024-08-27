@@ -31,10 +31,14 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Deploy to remote server
+      env:
+        GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          docker pull ghcr.io/${{ secrets.GHCR_USERNAME }}/tg_bot_reminder:latest
+          echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin
+          docker pull ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
           docker stop tg_bot_reminder || true
           docker rm tg_bot_reminder || true
-          docker run -d --name tg_bot_reminder -p 8443:8443 ghcr.io/${{ secrets.GHCR_USERNAME }}/tg_bot_reminder:latest
+          docker run -d --name tg_bot_reminder -p 8443:8443 ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
         EOF
