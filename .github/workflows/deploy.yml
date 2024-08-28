@@ -1,49 +1,73 @@
 name: Deploy to Remote Server
 
 on:
+  push:
+    branches:
+      - master
+
   release:
     types:
       - published
 
 jobs:
-  deploy:
+  test-and-vet:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-
-    - name: Log in to GitHub Container Registry
-      run: |
-        echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
-
-    - name: Build and push Docker image to GHCR
-      run: |
-        docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/tg_bot_reminder:latest .
-        docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/tg_bot_reminder:latest
-
-    - name: Add SSH key
-      uses: webfactory/ssh-agent@v0.5.1
+    - name: Set up Go
+      uses: actions/setup-go@v2
       with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        go-version: 1.23
 
-    - name: Deploy to remote server
-      env:
-        GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-        GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin &&
-          echo 'Pulling new Docker image' &&
-          docker pull ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest &&
-          echo 'Stopping old container' &&
-          docker stop tg_bot_reminder || true &&
-          docker rm tg_bot_reminder || true &&
-          echo 'Running new container with BOT_TOKEN' &&
-          echo \$BOT_TOKEN &&
-          docker run -d --name tg_bot_reminder -p 8443:8443 -e BOT_TOKEN=$BOT_TOKEN ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
-        "
+    - name: Run tests
+      run: go test ./... -coverpkg=./...
+
+    - name: Run go vet
+      run: go vet ./...
+
+  deploy:
+    needs: test-and-vet
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to GitHub Container Registry
+        run: |
+          echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+
+      - name: Build and push Docker image to GHCR
+        run: |
+          docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/tg_bot_reminder:latest .
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/tg_bot_reminder:latest
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.5.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to remote server
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin &&
+            echo 'Pulling new Docker image' &&
+            docker pull ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest &&
+            echo 'Stopping old container' &&
+            docker stop tg_bot_reminder || true &&
+            docker rm tg_bot_reminder || true &&
+            echo 'Running new container with BOT_TOKEN' &&
+            echo \$BOT_TOKEN &&
+            docker run -d --name tg_bot_reminder -p 8443:8443 -e BOT_TOKEN=$BOT_TOKEN ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
+          "
