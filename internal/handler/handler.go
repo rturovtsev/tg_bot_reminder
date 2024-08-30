@@ -4,6 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/olebedev/when"
+	"github.com/olebedev/when/rules"
+	"github.com/olebedev/when/rules/common"
+	"github.com/olebedev/when/rules/ru"
 	"log"
 	"strings"
 	"time"
@@ -14,25 +18,29 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 	text := update.Message.Text
 
 	if strings.HasPrefix(text, "/remindme") {
-		args := strings.SplitN(text, " ", 4)
-		if len(args) < 4 {
+		w := when.New(nil)
+		w.Add(ru.All...)
+		w.Add(common.All...)
+		w.SetOptions(&rules.Options{
+			Distance:     10,
+			MatchByOrder: true,
+		})
+
+		r, err := w.Parse(text, time.Now())
+
+		if err != nil {
 			bot.Send(tgbotapi.NewMessage(chatID, "Invalid arguments. Usage: /remindme <time> <message>"))
 			return
 		}
 
-		dateTimeStr, reminderTime, reminderText := args[1], args[2], args[3]
-		dateTime, err := time.Parse("2006-01-02 15:04", dateTimeStr+" "+reminderTime)
-		if err != nil {
-			bot.Send(tgbotapi.NewMessage(chatID, "Invalid time format. Use YYYY-MM-DD HH:MM"))
-			return
-		}
+		dateTime, reminderSource := r.Time, r.Source
 
-		_, err = db.Exec("INSERT INTO reminders (chat_id, text, datetime) VALUES (?, ?, ?)", chatID, reminderText, dateTime)
+		_, err = db.Exec("INSERT INTO reminders (chat_id, text, datetime) VALUES (?, ?, ?)", chatID, reminderSource, dateTime)
 		if err != nil {
 			log.Println(err)
 			bot.Send(tgbotapi.NewMessage(chatID, "Failed to add reminder"))
 		} else {
-			bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Reminder set: %s at %s", reminderText, dateTimeStr)))
+			bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Reminder set: %s at %s", reminderSource, dateTime)))
 		}
 	} else if strings.HasPrefix(text, "/listreminders") {
 		rows, err := db.Query("SELECT text, datetime FROM reminders WHERE chat_id = ?", chatID)
