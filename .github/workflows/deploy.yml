@@ -69,5 +69,5 @@ jobs:
             docker rm tg_bot_reminder || true &&
             echo 'Running new container with BOT_TOKEN' &&
             echo \$BOT_TOKEN &&
-            docker run -d --name tg_bot_reminder -v $HOME/tg_bot_reminder:/app/data -p 8443:8443 -e BOT_TOKEN=$BOT_TOKEN ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
+            docker run -d --name tg_bot_reminder --restart on-failure -v $HOME/tg_bot_reminder:/app/data -p 8443:8443 -e BOT_TOKEN=$BOT_TOKEN ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest
           "

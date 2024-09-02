@@ -14,6 +14,8 @@ import (
 
 func main() {
 	botToken := os.Getenv("BOT_TOKEN")
+	env := os.Getenv("ENV")
+
 	if botToken == "" {
 		log.Panic("BOT_TOKEN environment variable not set")
 	}
@@ -23,9 +25,17 @@ func main() {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
+	var db *sql.DB
 
-	db := storage.InitDB("/app/data/reminders.db")
+	if env == "dev" {
+		bot.Debug = true
+		db = storage.InitDB("reminders.db")
+		log.Printf("Authorized on account %s", bot.Self.UserName)
+	} else {
+		bot.Debug = false
+		db = storage.InitDB("/app/data/reminders.db")
+	}
+
 	defer db.Close()
 
 	u := tgbotapi.NewUpdate(0)

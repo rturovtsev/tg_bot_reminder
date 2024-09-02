@@ -30,7 +30,7 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 
 		r, err := w.Parse(text, time.Now())
 
-		if err != nil {
+		if err != nil || r == nil {
 			formatExample := "Ошибка формата времени. Возможные варианты:\n - сегодня в 11:10 {ваш_текст}\n - в пятницу после обеда {ваш_текст}\n - 14:00 следующего вторника {ваш_текст}\n - в следующую среду в 12:25 {ваш_текст}"
 
 			_, _ = bot.Send(tgbotapi.NewMessage(chatID, formatExample))
