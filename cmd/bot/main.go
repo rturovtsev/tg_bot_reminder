@@ -25,7 +25,7 @@ func main() {
 
 	bot.Debug = true
 
-	db := storage.InitDB("reminders.db")
+	db := storage.InitDB("/app/data/reminders.db")
 	defer db.Close()
 
 	u := tgbotapi.NewUpdate(0)
