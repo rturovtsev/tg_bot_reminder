@@ -17,7 +17,9 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 	chatID := update.Message.Chat.ID
 	text := update.Message.Text
 
-	if strings.HasPrefix(text, "/remindme") {
+	if strings.HasPrefix(text, "/start") {
+		_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Бот запущен. Доступные команды: /add, /list"))
+	} else if strings.HasPrefix(text, "/add") {
 		w := when.New(nil)
 		w.Add(ru.All...)
 		w.Add(common.All...)
@@ -29,27 +31,35 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 		r, err := w.Parse(text, time.Now())
 
 		if err != nil {
-			bot.Send(tgbotapi.NewMessage(chatID, "Invalid arguments. Usage: /remindme <time> <message>"))
+			formatExample := "Ошибка формата времени. Возможные варианты:\n - сегодня в 11:10 {ваш_текст}\n - в пятницу после обеда {ваш_текст}\n - 14:00 следующего вторника {ваш_текст}\n - в следующую среду в 12:25 {ваш_текст}"
+
+			_, _ = bot.Send(tgbotapi.NewMessage(chatID, formatExample))
 			return
 		}
 
 		dateTime, reminderSource := r.Time, r.Source
+		reminderSource = strings.Replace(reminderSource, "/add", "", -1)
 
 		_, err = db.Exec("INSERT INTO reminders (chat_id, text, datetime) VALUES (?, ?, ?)", chatID, reminderSource, dateTime)
 		if err != nil {
 			log.Println(err)
-			bot.Send(tgbotapi.NewMessage(chatID, "Failed to add reminder"))
+			_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Ошибка сохранения напоминания"))
 		} else {
-			bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Reminder set: %s at %s", reminderSource, dateTime)))
+			_, _ = bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Напоминание установлено: `%s`. Время срабатывания: %s", reminderSource, dateTime.Format("2006-01-02 15:04"))))
 		}
-	} else if strings.HasPrefix(text, "/listreminders") {
+	} else if strings.HasPrefix(text, "/list") {
 		rows, err := db.Query("SELECT text, datetime FROM reminders WHERE chat_id = ?", chatID)
 		if err != nil {
 			log.Println(err)
-			bot.Send(tgbotapi.NewMessage(chatID, "Failed to list reminders"))
+			_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Ошибка получения списка напоминаний"))
 			return
 		}
-		defer rows.Close()
+		defer func(rows *sql.Rows) {
+			err = rows.Close()
+			if err != nil {
+				log.Println(err)
+			}
+		}(rows)
 
 		var response string
 		for rows.Next() {
@@ -59,16 +69,16 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 				log.Println(err)
 				continue
 			}
-			response += fmt.Sprintf("- %s at %s\n", reminderText, dateTime.Format("2006-01-02 15:04"))
+			response += fmt.Sprintf("- `%s` Время срабатывания: %s\n", reminderText, dateTime.Format("2006-01-02 15:04"))
 		}
 
 		if response == "" {
-			response = "No active reminders"
+			response = "Нет активных напоминаний"
 		}
 
-		bot.Send(tgbotapi.NewMessage(chatID, response))
+		_, _ = bot.Send(tgbotapi.NewMessage(chatID, response))
 	} else {
-		bot.Send(tgbotapi.NewMessage(chatID, "Unknown command"))
+		_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда. Попробуйте /add или /list"))
 	}
 
 }
