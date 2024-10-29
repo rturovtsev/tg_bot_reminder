@@ -45,7 +45,9 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 			log.Println(err)
 			_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Ошибка сохранения напоминания"))
 		} else {
-			_, _ = bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Напоминание установлено: `%s`. Время срабатывания: %s", reminderSource, dateTime.Format("2006-01-02 15:04"))))
+			txt := tgbotapi.NewMessage(chatID, fmt.Sprintf("Установленное напоминание: <blockquote>%s</blockquote> Время срабатывания: %s", reminderSource, dateTime.Format("2006-01-02 15:04")))
+			txt.ParseMode = tgbotapi.ModeHTML
+			_, _ = bot.Send(txt)
 		}
 	} else if strings.HasPrefix(text, "/list") {
 		rows, err := db.Query("SELECT text, datetime FROM reminders WHERE chat_id = ?", chatID)
@@ -69,14 +71,17 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 				log.Println(err)
 				continue
 			}
-			response += fmt.Sprintf("- `%s` Время срабатывания: %s\n", reminderText, dateTime.Format("2006-01-02 15:04"))
+			response += fmt.Sprintf("- <blockquote>%s</blockquote> Время срабатывания: %s\n", reminderText, dateTime.Format("2006-01-02 15:04"))
 		}
 
 		if response == "" {
 			response = "Нет активных напоминаний"
 		}
 
-		_, _ = bot.Send(tgbotapi.NewMessage(chatID, response))
+		txt := tgbotapi.NewMessage(chatID, response)
+		txt.ParseMode = tgbotapi.ModeHTML
+
+		_, _ = bot.Send(txt)
 	} else {
 		_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда. Попробуйте /add или /list"))
 	}
