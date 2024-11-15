@@ -5,10 +5,8 @@ go 1.23.0
 require (
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/mattn/go-sqlite3 v1.14.24
-	github.com/olebedev/when v1.0.0
+	github.com/olebedev/when v1.1.0
 )
-
-replace github.com/olebedev/when v1.0.0 => github.com/rturovtsev/when v1.0.3
 
 require (
 	github.com/AlekSi/pointer v1.2.0 // indirect
