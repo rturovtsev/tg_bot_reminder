@@ -19,36 +19,6 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 
 	if strings.HasPrefix(text, "/start") {
 		_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Бот запущен. Доступные команды: /add, /list"))
-	} else if strings.HasPrefix(text, "/add") {
-		w := when.New(nil)
-		w.Add(ru.All...)
-		w.Add(common.All...)
-		w.SetOptions(&rules.Options{
-			Distance:     10,
-			MatchByOrder: true,
-		})
-
-		r, err := w.Parse(text, time.Now())
-
-		if err != nil || r == nil {
-			formatExample := "Ошибка формата времени. Возможные варианты:\n - сегодня в 11:10 {ваш_текст}\n - в пятницу после обеда {ваш_текст}\n - 14:00 следующего вторника {ваш_текст}\n - в следующую среду в 12:25 {ваш_текст}"
-
-			_, _ = bot.Send(tgbotapi.NewMessage(chatID, formatExample))
-			return
-		}
-
-		dateTime, reminderSource := r.Time, r.Source
-		reminderSource = strings.Replace(reminderSource, "/add", "", -1)
-
-		_, err = db.Exec("INSERT INTO reminders (chat_id, text, datetime) VALUES (?, ?, ?)", chatID, reminderSource, dateTime)
-		if err != nil {
-			log.Println(err)
-			_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Ошибка сохранения напоминания"))
-		} else {
-			txt := tgbotapi.NewMessage(chatID, fmt.Sprintf("Установленное напоминание: <blockquote>%s</blockquote> Время срабатывания: %s", reminderSource, dateTime.Format("2006-01-02 15:04")))
-			txt.ParseMode = tgbotapi.ModeHTML
-			_, _ = bot.Send(txt)
-		}
 	} else if strings.HasPrefix(text, "/list") {
 		rows, err := db.Query("SELECT text, datetime FROM reminders WHERE chat_id = ?", chatID)
 		if err != nil {
@@ -83,7 +53,34 @@ func HandleMessage(bot *tgbotapi.BotAPI, update tgbotapi.Update, db *sql.DB) {
 
 		_, _ = bot.Send(txt)
 	} else {
-		_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда. Попробуйте /add или /list"))
-	}
+		w := when.New(nil)
+		w.Add(ru.All...)
+		w.Add(common.All...)
+		w.SetOptions(&rules.Options{
+			Distance:     10,
+			MatchByOrder: true,
+		})
 
+		r, err := w.Parse(text, time.Now())
+
+		if err != nil || r == nil {
+			formatExample := "Ошибка формата времени. Возможные варианты:\n - сегодня в 11:10 {ваш_текст}\n - в пятницу после обеда {ваш_текст}\n - 14:00 следующего вторника {ваш_текст}\n - в следующую среду в 12:25 {ваш_текст}"
+
+			_, _ = bot.Send(tgbotapi.NewMessage(chatID, formatExample))
+			return
+		}
+
+		dateTime, reminderSource := r.Time, r.Source
+		reminderSource = strings.Replace(reminderSource, "/add", "", -1)
+
+		_, err = db.Exec("INSERT INTO reminders (chat_id, text, datetime) VALUES (?, ?, ?)", chatID, reminderSource, dateTime)
+		if err != nil {
+			log.Println(err)
+			_, _ = bot.Send(tgbotapi.NewMessage(chatID, "Ошибка сохранения напоминания"))
+		} else {
+			txt := tgbotapi.NewMessage(chatID, fmt.Sprintf("Установленное напоминание: <blockquote>%s</blockquote> Время срабатывания: %s", reminderSource, dateTime.Format("2006-01-02 15:04")))
+			txt.ParseMode = tgbotapi.ModeHTML
+			_, _ = bot.Send(txt)
+		}
+	}
 }
