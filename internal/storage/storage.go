@@ -16,7 +16,8 @@ func InitDB(filepath string) *sql.DB {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		chat_id INTEGER,
 		text TEXT,
-		datetime DATETIME
+		datetime DATETIME,
+		repeat_type TEXT DEFAULT 'none'
 	);`
 
 	if _, err := db.Exec(createTableSQL); err != nil {
