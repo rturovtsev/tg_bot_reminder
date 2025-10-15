@@ -3,13 +3,14 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/rturovtsev/telegram-bot-reminder/internal/handler"
-	"github.com/rturovtsev/telegram-bot-reminder/internal/storage"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/rturovtsev/telegram-bot-reminder/internal/handler"
+	"github.com/rturovtsev/telegram-bot-reminder/internal/storage"
 )
 
 func main() {
@@ -46,6 +47,12 @@ func main() {
 	go checkReminders(bot, db)
 
 	for update := range updates {
+		// Обрабатываем callback от inline-кнопок
+		if update.CallbackQuery != nil {
+			handler.HandleCallback(bot, update.CallbackQuery, db)
+			continue
+		}
+
 		if update.Message == nil {
 			continue
 		}
@@ -68,7 +75,7 @@ func checkReminders(bot *tgbotapi.BotAPI, db *sql.DB) {
 
 		var remindersToDelete []int
 		var remindersToUpdate []struct {
-			id         int
+			id           int
 			nextDatetime time.Time
 		}
 
@@ -90,7 +97,7 @@ func checkReminders(bot *tgbotapi.BotAPI, db *sql.DB) {
 				nextTime := calculateNextRepeat(now, repeatType)
 				if !nextTime.IsZero() {
 					remindersToUpdate = append(remindersToUpdate, struct {
-						id         int
+						id           int
 						nextDatetime time.Time
 					}{id, nextTime})
 				} else {
