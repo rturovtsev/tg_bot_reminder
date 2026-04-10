@@ -60,7 +60,7 @@ jobs:
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin &&
             echo 'Pulling new Docker image' &&
             docker pull ghcr.io/$GHCR_USERNAME/tg_bot_reminder:latest &&
